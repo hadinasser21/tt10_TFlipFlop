@@ -39,8 +39,16 @@ async def test_project(dut):
     # Set T=1
     dut.ui_in.value = 0b00000001
 
-    # Capture current Q then expect toggles
+       # Capture current Q then expect toggles
     q = int(dut.uo_out.value) & 0x1
     await ClockCycles(dut.clk, 1)
     q_next = int(dut.uo_out.value) & 0x1
-    assert q_next == (q ^ 1), "With T=1, Q should toggle_
+    assert q_next == (q ^ 1), "With T=1, Q should toggle"
+
+    q = q_next
+    await ClockCycles(dut.clk, 1)
+    q_next = int(dut.uo_out.value) & 0x1
+    assert q_next == (q ^ 1), "With T=1, Q should toggle again"
+
+    dut._log.info("All tests passed.")
+
