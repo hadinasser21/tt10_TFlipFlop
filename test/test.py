@@ -31,11 +31,13 @@ async def test_project(dut):
     dut._log.info("Test: T=0 -> hold")
     # T = ui_in[0] = 0
     dut.ui_in.value = 0b00000000
+    await ReadOnly()
     q0 = int(dut.uo_out.value) & 0x1
     await ClockCycles(dut.clk, 3)
     await ReadOnly()
     q1 = int(dut.uo_out.value) & 0x1
     assert q1 == q0, "With T=0, Q should hold"
+
 
     dut._log.info("Test: T=1 -> toggle each clock")
     dut.ui_in.value = 0b00000001
