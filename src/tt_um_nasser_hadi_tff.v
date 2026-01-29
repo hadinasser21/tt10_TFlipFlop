@@ -6,15 +6,20 @@
 `default_nettype none
 
 module tt_um_nasser_hadi_tff (
+`ifdef GL_TEST
+    input  wire VPWR,
+    input  wire VGND,
+`endif
     input  wire [7:0] ui_in,   // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
     output wire [7:0] uio_out,  // IOs: Output path
     output wire [7:0] uio_oe,   // IOs: Enable path
-    input  wire ena,            // Enable
+    input  wire ena,            // Enable (unused)
     input  wire clk,            // Clock
     input  wire rst_n            // Active-low reset
 );
+
 
     // Input mapping
     wire T = ui_in[0];
