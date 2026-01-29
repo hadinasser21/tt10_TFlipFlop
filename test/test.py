@@ -5,12 +5,10 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, ReadOnly
 
-
 @cocotb.test()
 async def test_project(dut):
     dut._log.info("Start")
 
-    # Clock: 10 us period (100 kHz)
     clock = Clock(dut.clk, 10, units="us")
     cocotb.start_soon(clock.start())
 
@@ -21,27 +19,28 @@ async def test_project(dut):
     dut.uio_in.value = 0
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 5)
+
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 1)
-    await ReadOnly()
+    await ReadOnly()  # ✅ read phase
+    assert (int(dut.uo_out.value) & 0x1) == 0, "Q should be 0 after reset"
 
-    # After reset, Q should be 0 (uo_out[0])
-    assert int(dut.uo_out.value) & 0x1 == 0, "Q should be 0 after reset"
-
+    # -------- T=0 hold --------
     dut._log.info("Test: T=0 -> hold")
-    # T = ui_in[0] = 0
-    dut.ui_in.value = 0b00000000
+    dut.ui_in.value = 0b00000000          # ✅ write first
+    await ClockCycles(dut.clk, 1)         # ✅ move time forward
     await ReadOnly()
     q0 = int(dut.uo_out.value) & 0x1
+
     await ClockCycles(dut.clk, 3)
     await ReadOnly()
     q1 = int(dut.uo_out.value) & 0x1
     assert q1 == q0, "With T=0, Q should hold"
 
-
+    # -------- T=1 toggle --------
     dut._log.info("Test: T=1 -> toggle each clock")
-    dut.ui_in.value = 0b00000001
-
+    dut.ui_in.value = 0b00000001          # ✅ write first
+    await ClockCycles(dut.clk, 1)         # ✅ let it take effect cleanly
     await ReadOnly()
     q = int(dut.uo_out.value) & 0x1
 
@@ -57,4 +56,3 @@ async def test_project(dut):
     assert q_next == (q ^ 1), "With T=1, Q should toggle again"
 
     dut._log.info("All tests passed.")
-
