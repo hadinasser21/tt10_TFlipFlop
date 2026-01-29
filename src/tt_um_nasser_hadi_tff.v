@@ -31,8 +31,8 @@ module tt_um_nasser_hadi_tff (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             Q <= 1'b0;
-        else if (T)
-            Q <= ~Q;
+        else
+            Q <= T ? ~Q : Q;
     end
 
     // Output mapping
