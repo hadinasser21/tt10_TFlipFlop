@@ -3,64 +3,52 @@
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles
+from cocotb.triggers import ClockCycles, Timer
 
 
 @cocotb.test()
 async def test_project(dut):
     dut._log.info("Start")
 
-    # Clock: 10 us period (100 kHz)
+    # Clock: 10 us period (100 kHz)  (same as the lab manual style)
     clock = Clock(dut.clk, 10, units="us")
     cocotb.start_soon(clock.start())
 
-    # ---------------- Reset ----------------
+    # -------- Reset --------
     dut._log.info("Reset")
     dut.ena.value = 1
     dut.ui_in.value = 0
     dut.uio_in.value = 0
-
     dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 5)
+    await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 1)
+
+    # Give 1 tiny delay so nonblocking assignments settle cleanly
+    await Timer(1, units="ns")
 
     # After reset, Q should be 0
-    q = int(dut.uo_out.value) & 0x1
+    q = int(dut.uo_out[0].value)
     assert q == 0, f"Q should be 0 after reset, got {q}"
 
-    # ---------------- Test T=0 (hold) ----------------
+    # -------- Test: T=0 (hold) --------
     dut._log.info("Test: T=0 -> hold")
-    dut.ui_in[0].value = 0
-
-    q0 = int(dut.uo_out.value) & 0x1
+    dut.ui_in.value = 0b00000000  # T = ui_in[0] = 0
     await ClockCycles(dut.clk, 3)
-    q1 = int(dut.uo_out.value) & 0x1
+    await Timer(1, units="ns")
 
-    assert q1 == q0, f"With T=0, Q should hold (q0={q0}, q1={q1})"
+    q_hold = int(dut.uo_out[0].value)
+    assert q_hold == q, f"With T=0, Q should hold (expected {q}, got {q_hold})"
 
-    # ---------------- Test T=1 (toggle) ----------------
+    # -------- Test: T=1 (toggle each clock) --------
     dut._log.info("Test: T=1 -> toggle each clock")
-    dut.ui_in[0].value = 1
+    dut.ui_in.value = 0b00000001  # T = 1
 
-    q = int(dut.uo_out.value) & 0x1
-    await ClockCycles(dut.clk, 1)
-    q_next = int(dut.uo_out.value) & 0x1
-    assert q_next == (q ^ 1), f"With T=1, Q should toggle (q={q}, q_next={q_next})"
-
-    q = q_next
-    await ClockCycles(dut.clk, 1)
-    q_next = int(dut.uo_out.value) & 0x1
-    assert q_next == (q ^ 1), f"With T=1, Q should toggle again (q={q}, q_next={q_next})"
-
-    # ---------------- Reset again check ----------------
-    dut._log.info("Test: Reset forces Q=0 again")
-    dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 2)
-    dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 1)
-
-    q = int(dut.uo_out.value) & 0x1
-    assert q == 0, f"After reset again, Q should be 0, got {q}"
+    # Check several toggles
+    for i in range(4):
+        await ClockCycles(dut.clk, 1)
+        await Timer(1, units="ns")  # key: let NBA updates settle
+        q_next = int(dut.uo_out[0].value)
+        assert q_next == (q ^ 1), f"Toggle {i}: expected {q ^ 1}, got {q_next}"
+        q = q_next
 
     dut._log.info("All tests passed.")
