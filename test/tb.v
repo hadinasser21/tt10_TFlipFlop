@@ -6,13 +6,6 @@
 */
 module tb ();
 
-  // Dump the signals to a VCD file. You can view it with gtkwave or surfer.
-  initial begin
-    $dumpfile("tb.vcd");
-    $dumpvars(0, tb);
-    #1;
-  end
-
   // Wire up the inputs and outputs:
   reg clk;
   reg rst_n;
@@ -22,15 +15,37 @@ module tb ();
   wire [7:0] uo_out;
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
+
 `ifdef GL_TEST
   wire VPWR = 1'b1;
   wire VGND = 1'b0;
 `endif
 
+  // ✅ Bit-level aliases for waveform visibility
+  wire t_bit;
+  wire q_bit;
+  assign t_bit = ui_in[0];
+  assign q_bit = uo_out[0];
+
+  // Dump the signals to a VCD file. You can view it with gtkwave or surfer.
+  initial begin
+    $dumpfile("tb.vcd");
+
+    // dump everything (keeps your current behavior)
+    $dumpvars(0, tb);
+
+    // ✅ force single-bit signals into the VCD so GTKWave can show them
+    $dumpvars(1, t_bit);
+    $dumpvars(1, q_bit);
+    $dumpvars(1, clk);
+    $dumpvars(1, rst_n);
+
+    #1;
+  end
+
   // Replace tt_um_example with your module name:
   tt_um_nasser_hadi_tff user_project (
 
-      // Include power ports for the Gate Level test:
 `ifdef GL_TEST
       .VPWR(VPWR),
       .VGND(VGND),
